@@ -63,6 +63,7 @@ async def get_mail(mail):
 	attempts = 0
 
 	while True:
+		#attempts += 1
 		if attempts >= 10:
 			p_print("Failed to find mail... exiting.", Colours.FAIL)
 			sys.exit(1)
