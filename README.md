@@ -1,4 +1,4 @@
-# py_mega_account_generator
+# MEGA Account Generator Revamped
 
 Generate MEGA accounts with a single command, upload files, get shareable links and do all of that however many times you want with loops.
 
