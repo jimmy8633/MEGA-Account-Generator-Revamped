@@ -7,6 +7,7 @@ import random
 import sys
 import pymailtm
 from faker import Faker
+from playwright.async_api import async_playwright, Browser
 
 from pymailtm.pymailtm import CouldNotGetAccountException, CouldNotGetMessagesException
 
@@ -25,24 +26,24 @@ def get_random_string(length):
 	return "".join(random.choice(alphabet) for _ in range(length))
 
 
-async def initial_setup(context, message, credentials):
-	"""Initial setup for the account."""
-	confirm_link = re.findall(
-		r'href="(https:\/\/mega\.nz\/#confirm[^ ][^"]*)', str(message)
-	)[0]
+async def initial_setup(browser: Browser, message: str, credentials: Credentials):
+    """Initial setup for the account."""
+    confirm_link = re.findall(
+        r'href="(https:\/\/mega\.nz\/#confirm[^ ][^"]*)', str(message)
+    )[0]
 
-	confirm_page = await context.newPage()
-	await confirm_page.goto(confirm_link)
-	confirm_field = "#login-password2"
-	await confirm_page.waitForSelector(confirm_field)
-	await confirm_page.click(confirm_field)
-	await confirm_page.type(confirm_field, credentials.password)
-	await confirm_page.click(".login-button")
-	try:
-		await confirm_page.waitForSelector("#freeStart", timeout=30000)
-		await confirm_page.click("#freeStart")
-	except TimeoutError:
-		pass
+    confirm_page = await browser.new_page()
+    await confirm_page.goto(confirm_link)
+    confirm_field = "#login-password2"
+    await confirm_page.wait_for_selector(confirm_field)
+    await confirm_page.click(confirm_field)
+    await confirm_page.type(confirm_field, credentials.password)
+    await confirm_page.click(".login-button")
+    try:
+        await confirm_page.wait_for_selector("#freeStart", timeout=30000)
+        await confirm_page.click("#freeStart")
+    except TimeoutError:
+        pass
 
 
 async def mail_login(credentials: Credentials):
@@ -86,7 +87,7 @@ async def type_name(page, credentials: Credentials):
 	firstname = name[0]
 	lastname = name[1]
 	await page.goto("https://mega.nz/register")
-	await page.waitForSelector("#register_form")
+	await page.wait_for_selector("#register_form")
 	await page.type("#register-firstname-registerpage2", firstname)
 	await page.type("#register-lastname-registerpage2", lastname)
 	await page.type("#register-email-registerpage2", credentials.email)
@@ -99,10 +100,11 @@ async def type_password(page, credentials: Credentials):
 	await page.click("#register-password-registerpage3")
 	await page.type("#register-password-registerpage3", credentials.password)
 	await page.click("#register-check-registerpage2")
-	await page.querySelectorAllEval(
-		".understand-check", "(elements) => {elements[0].click();}"
-	)
+
+	await page.wait_for_selector(".understand-check")
+	await page.click(".understand-check")
 	await page.click(".register-button")
+
 	p_print("Registered account successfully!", Colours.OKGREEN)
 
 

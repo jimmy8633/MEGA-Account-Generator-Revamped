@@ -5,7 +5,7 @@ import argparse
 import os
 import sys
 from typing import Tuple
-import pyppeteer
+from playwright.async_api import async_playwright
 
 from services.alive import keepalive
 from services.upload import upload_file
@@ -146,55 +146,45 @@ def loop_registrations(loop_count: int, executable_path: str, config: Config):
 
 
 async def register(credentials: Credentials, executable_path: str, config: Config):
-	"""Registers and verifies mega.nz account."""
-	browser = await pyppeteer.launch(
-		{
-			"headless": True,
-			"ignoreHTTPSErrors": True,
-			"userDataDir": f"{os.getcwd()}/tmp",
-			"args": args,
-			"executablePath": executable_path,
-			"autoClose": False,
-			"ignoreDefaultArgs": ["--enable-automation", "--disable-extensions"],
-		}
-	)
+    """Registers and verifies mega.nz account."""
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True, args=args, executable_path=executable_path)
+        context = await browser.new_context(ignore_https_errors=True)  # Set ignore_https_errors at context level
+        page = await context.new_page()
 
-	context = await browser.createIncognitoBrowserContext()
-	page = await context.newPage()
+        await type_name(page, credentials)
+        await type_password(page, credentials)
+        mail = await mail_login(credentials)
 
-	await type_name(page, credentials)
-	await type_password(page, credentials)
-	mail = await mail_login(credentials)
+        await asyncio.sleep(1.5)
+        message = await get_mail(mail)
 
-	await asyncio.sleep(1.5)
-	message = await get_mail(mail)
+        await initial_setup(context, message, credentials)
+        await asyncio.sleep(0.5)
+        await browser.close()
 
-	await initial_setup(context, message, credentials)
-	await asyncio.sleep(0.5)
-	await browser.close()
+        p_print("Verified account.", Colours.OKGREEN)
+        p_print(
+            f"Email: {credentials.email}\nPassword: {credentials.password}",
+            Colours.OKCYAN,
+        )
 
-	p_print("Verified account.", Colours.OKGREEN)
-	p_print(
-		f"Email: {credentials.email}\nPassword: {credentials.password}",
-		Colours.OKCYAN,
-	)
+        delete_default(credentials)
+        save_credentials(credentials, config.accountFormat)
 
-	delete_default(credentials)
-	save_credentials(credentials, config.accountFormat)
-
-	if console_args.file is not None:
-		file_size = os.path.getsize(console_args.file)
-		if os.path.exists(console_args.file) and 0 < file_size < 2e10:
-			if file_size >= 5e9:
-				p_print(
-					"File is larger than 5GB, mega.nz limits traffic to 5GB per IP.",
-					Colours.WARNING,
-				)
-			upload_file(console_args.public, console_args.file, credentials)
-		else:
-			p_print("File not found.", Colours.FAIL)
-	if console_args.loop is None or console_args.loop <= 1:
-		sys.exit(0)
+        if console_args.file is not None:
+            file_size = os.path.getsize(console_args.file)
+            if os.path.exists(console_args.file) and 0 < file_size < 2e10:
+                if file_size >= 5e9:
+                    p_print(
+                        "File is larger than 5GB, mega.nz limits traffic to 5GB per IP.",
+                        Colours.WARNING,
+                    )
+                upload_file(console_args.public, console_args.file, credentials)
+            else:
+                p_print("File not found.", Colours.FAIL)
+    if console_args.loop is None or console_args.loop <= 1:
+        sys.exit(0)
 
 
 if __name__ == "__main__":
