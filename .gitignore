@@ -9,3 +9,4 @@ credentials.txt
 .ruff_cache
 .mypy_cache
 .DS_Store
+ungoogled-chromium/
