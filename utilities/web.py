@@ -92,8 +92,7 @@ async def get_mail(mail):
     p_print("Failed to find mail after maximum retries... exiting.", Colours.FAIL)
     raise CouldNotGetAccountException("Failed to find mail after maximum retries... exiting.")
 
-#    sys.exit(1)
-
+    sys.exit(1)
 
 
 async def type_name(page, credentials: Credentials):

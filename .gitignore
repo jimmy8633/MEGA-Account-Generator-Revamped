@@ -10,3 +10,4 @@ credentials.txt
 .mypy_cache
 .DS_Store
 ungoogled-chromium/
+node_modules/

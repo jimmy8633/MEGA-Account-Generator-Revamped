@@ -36,14 +36,6 @@ from utilities.etc import (
 )
 
 # Constants
-DEFAULT_INSTALLS = [
-    "C:/Program Files/Google/Chrome/Application/chrome.exe",
-    "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
-    "C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe",
-    "C:/Program Files (x86)/BraveSoftware/Brave-Browser/Application/brave.exe",
-    "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
-]
-
 ARGS = [
     "--no-sandbox",
     "--disable-setuid-sandbox",
@@ -77,32 +69,20 @@ def setup() -> Tuple[str, Config]:
     if config is None:
         write_default_config()
         config = concrete_read_config()
-    executable_path = config.executablePath or prompt_for_executable_path(config)
-    return executable_path, config
+    return config
 
-def prompt_for_executable_path(config: Config) -> str:
-    p_print("Failed to find a Chromium based browser. Please make sure you have one installed.", Colours.FAIL)
-    executable_path = input("Please enter the path to a Chromium based browser's executable: ")
-    if os.path.exists(executable_path):
-        p_print("Found executable!", Colours.OKGREEN)
-        write_config("executablePath", executable_path, config)
-    else:
-        p_print("Failed to find executable!", Colours.FAIL)
-        sys.exit(1)
-    return executable_path
-
-def loop_registrations(loop_count: int, executable_path: str, config: Config):
+def loop_registrations(loop_count: int, config: Config):
     """Registers accounts in a loop."""
     for i in range(loop_count):
         p_print(f"Loop {i + 1}/{loop_count}", Colours.OKGREEN)
         clear_tmp()
         credentials = asyncio.run(generate_mail())
-        asyncio.run(register(credentials, executable_path, config))
+        asyncio.run(register(credentials, config))
 
-async def register(credentials: Credentials, executable_path: str, config: Config):
+async def register(credentials: Credentials, config: Config):
     """Registers and verifies a mega.nz account."""
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True, args=ARGS, executable_path=executable_path)
+        browser = await p.firefox.launch(headless=True, args=ARGS)
         context = await browser.new_context(ignore_https_errors=True)
         page = await context.new_page()
 
@@ -143,18 +123,15 @@ if __name__ == "__main__":
     check_for_updates()
     console_args = parse_args()
 
-    executable_path, config = setup()
-    if not executable_path:
-        p_print("Failed while setting up!", Colours.FAIL)
-        sys.exit(1)
+    config = setup()
 
     if console_args.extract:
         extract_credentials(config.accountFormat)
     elif console_args.keepalive:
         keepalive(console_args.verbose)
     elif console_args.loop and console_args.loop > 1:
-        loop_registrations(console_args.loop, executable_path, config)
+        loop_registrations(console_args.loop, config)
     else:
         clear_tmp()
         credentials = asyncio.run(generate_mail())
-        asyncio.run(register(credentials, executable_path, config))
+        asyncio.run(register(credentials, config))
