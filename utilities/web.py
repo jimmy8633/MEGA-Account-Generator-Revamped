@@ -73,7 +73,7 @@ async def get_mail(mail):
     """Get the latest email from the mail.tm account with exponential backoff and max attempts."""
     base_delay = 1.5  # Base delay in seconds
     max_delay = 30  # Maximum delay in seconds
-    max_attempts = 20  # Maximum number of retries
+    max_attempts = 50  # Maximum number of retries
     attempt = 0
 
     while attempt < max_attempts:
@@ -129,7 +129,7 @@ async def generate_mail() -> Credentials:
     
     base_delay = 1  # Base delay in seconds
     max_delay = 30  # Maximum delay in seconds
-    max_attempts = 30  # Maximum number of retries
+    max_attempts = 50  # Maximum number of retries
     attempt = 0
 
     while attempt < max_attempts:
