@@ -109,18 +109,20 @@ async def type_password(page, credentials: Credentials):
 
 
 async def generate_mail() -> Credentials:
-	"""Generate mail.tm account and return account credentials."""
-	mail = pymailtm.MailTm()
-	while True:
-		try:
-			account = mail.get_account()
-			break
-		except CouldNotGetAccountException:
-			p_print("Retrying mail.tm account generation...", Colours.WARNING)
+    """Generate mail.tm account and return account credentials (infinite retries)."""
+    mail = pymailtm.MailTm()
+    while True:
+        try:
+            account = mail.get_account()
+            break
+        except CouldNotGetAccountException:
+            p_print("Retrying mail.tm account generation...", Colours.WARNING)  
 
-	credentials = Credentials()
-	credentials.email = account.address
-	credentials.emailPassword = account.password
-	credentials.password = get_random_string(14)
-	credentials.id = account.id_
-	return credentials
+            await asyncio.sleep(1)  # Introduce delay here
+
+    credentials = Credentials()
+    credentials.email = account.address
+    credentials.emailPassword = account.password
+    credentials.password = get_random_string(14)
+    credentials.id = account.id_
+    return credentials
