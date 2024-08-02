@@ -54,7 +54,6 @@ async def initial_setup(browser: Browser, message: str, credentials: Credentials
 
 
 
-
 async def mail_login(credentials: Credentials):
 	"""Logs into the mail.tm account with the generated credentials"""
 	while True:
@@ -110,10 +109,10 @@ async def type_password(page, credentials: Credentials):
 	await page.type("#register-password-registerpage3", credentials.password)
 	await page.click("#register-check-registerpage2")
 
-	await page.wait_for_selector(".understand-check")
-	await page.click(".understand-check")
-	await page.click(".register-button")
+	# Evaluate JavaScript to click the checkbox element
+	await page.evaluate("document.querySelector('.understand-check').click()")
 
+	await page.click(".register-button")
 	p_print("Registered account successfully!", Colours.OKGREEN)
 
 
