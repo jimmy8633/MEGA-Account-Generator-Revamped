@@ -28,9 +28,7 @@ def get_random_string(length):
 
 async def initial_setup(browser: Browser, message: str, credentials: Credentials):
     """Initial setup for the account."""
-    confirm_link = re.findall(
-        r'href="(https:\/\/mega\.nz\/#confirm[^ ][^"]*)', str(message)
-    )[0]
+    confirm_link = re.findall(r'href="(https:\/\/mega\.nz\/#confirm[^ ][^"]*)', str(message))[0]
 
     confirm_page = await browser.new_page()
     await confirm_page.goto(confirm_link)
@@ -39,11 +37,16 @@ async def initial_setup(browser: Browser, message: str, credentials: Credentials
     await confirm_page.click(confirm_field)
     await confirm_page.type(confirm_field, credentials.password)
     await confirm_page.click(".login-button")
+
     try:
-        await confirm_page.wait_for_selector("#freeStart", timeout=30000)
+        await confirm_page.wait_for_selector("#freeStart", timeout=60000)  # Increased timeout to 60 seconds
         await confirm_page.click("#freeStart")
     except TimeoutError:
-        pass
+        # Log page content for debugging
+        content = await confirm_page.content()
+        p_print("Timeout while waiting for #freeStart. Page content:\n" + content, Colours.FAIL)
+        raise
+
 
 
 async def mail_login(credentials: Credentials):
