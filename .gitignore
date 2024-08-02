@@ -11,3 +11,4 @@ credentials.txt
 .DS_Store
 ungoogled-chromium/
 node_modules/
+test1.py
