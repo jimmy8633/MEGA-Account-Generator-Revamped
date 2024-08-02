@@ -53,6 +53,7 @@ if sys.version_info.major == 3 and sys.version_info.minor <= 11:
     except AttributeError:
         reinstall_tenacity()
 
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("-ka", "--keepalive", action="store_true", help="Logs into the accounts to keep them alive.")
@@ -63,6 +64,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-l", "--loop", type=int, help="Loops the program for a specified amount of times.")
     return parser.parse_args()
 
+
 def setup() -> Tuple[str, Config]:
     """Sets up the configs so everything runs smoothly."""
     config = read_config()
@@ -71,67 +73,26 @@ def setup() -> Tuple[str, Config]:
         config = concrete_read_config()
     return config
 
-def loop_registrations(loop_count: int, config: Config):
-    """Registers accounts in a loop."""
-    for i in range(loop_count):
-        p_print(f"Loop {i + 1}/{loop_count}", Colours.OKGREEN)
-        clear_tmp()
-        credentials = asyncio.run(generate_mail())
-        asyncio.run(register(credentials, config))
-
-async def register(credentials: Credentials, config: Config):
+async def register(credentials: Credentials, config: Config, chosen_browser=None):
     """Registers and verifies a mega.nz account."""
+
+    # Check if browsers are installed
     async with async_playwright() as p:
-        browser = await p.firefox.launch(headless=True, args=ARGS)
+        available_browsers = await p.chromium.browsers(), await p.firefox.browsers(), await p.webkit.browsers()
+        if not any(available_browsers):
+            print("No browsers found! Installing Playwright browsers...")
+            await install_playwright_browsers()
+
+    # Choose browser if not provided
+    if not chosen_browser:
+        browser_options = ["Chromium", "Firefox", "WebKit"]
+        chosen_browser = browser_options[int(input("Choose a browser (1 - Chromium, 2 - Firefox, 3 - WebKit): ")) - 1]
+
+    async with async_playwright() as p:
+        browser_func = getattr(p, chosen_browser.lower()).launch
+        browser = await browser_func(headless=True, args=ARGS)
         context = await browser.new_context(ignore_https_errors=True)
         page = await context.new_page()
 
         await type_name(page, credentials)
         await type_password(page, credentials)
-        mail = await mail_login(credentials)
-
-        await asyncio.sleep(1.5)
-        message = await get_mail(mail)
-
-        await initial_setup(context, message, credentials)
-        await asyncio.sleep(0.5)
-        await browser.close()
-
-        p_print("Verified account.", Colours.OKGREEN)
-        p_print(f"Email: {credentials.email}\nPassword: {credentials.password}", Colours.OKCYAN)
-
-        delete_default(credentials)
-        save_credentials(credentials, config.accountFormat)
-
-        if console_args.file:
-            handle_file_upload(console_args.file, console_args.public, credentials)
-    if not console_args.loop or console_args.loop <= 1:
-        sys.exit(0)
-
-def handle_file_upload(file_path: str, public: bool, credentials: Credentials):
-    """Handles file upload logic."""
-    file_size = os.path.getsize(file_path)
-    if os.path.exists(file_path) and 0 < file_size < 2e10:
-        if file_size >= 5e9:
-            p_print("File is larger than 5GB, mega.nz limits traffic to 5GB per IP.", Colours.WARNING)
-        upload_file(public, file_path, credentials)
-    else:
-        p_print("File not found.", Colours.FAIL)
-
-if __name__ == "__main__":
-    clear_console()
-    check_for_updates()
-    console_args = parse_args()
-
-    config = setup()
-
-    if console_args.extract:
-        extract_credentials(config.accountFormat)
-    elif console_args.keepalive:
-        keepalive(console_args.verbose)
-    elif console_args.loop and console_args.loop > 1:
-        loop_registrations(console_args.loop, config)
-    else:
-        clear_tmp()
-        credentials = asyncio.run(generate_mail())
-        asyncio.run(register(credentials, config))
